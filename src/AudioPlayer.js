@@ -5,7 +5,9 @@ const AudioPlayer = () => {
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [audioURLs, setAudioURLs] = useState([]);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0); // Track current playback time
   const audioPlayerRef = useRef(null);
+  const progressBarRef = useRef(null); // Reference to the progress bar element
 
   const handleFileUpload = (e) => {
     const newAudioFiles = [...audioFiles, ...e.target.files];
@@ -70,6 +72,24 @@ const AudioPlayer = () => {
     }
   }, [currentTrackIndex, audioURLs, isPlaying]);
 
+  useEffect(() => {
+    // Update the current time when the audio playback time changes
+    const updateCurrentTime = () => {
+      setCurrentTime(audioPlayerRef.current.currentTime);
+    };
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.addEventListener("timeupdate", updateCurrentTime);
+    }
+    return () => {
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.removeEventListener(
+          "timeupdate",
+          updateCurrentTime
+        );
+      }
+    };
+  }, []);
+
   const handlePlay = (index) => {
     setCurrentTrackIndex(index);
     setIsPlaying(true);
@@ -81,6 +101,15 @@ const AudioPlayer = () => {
     } else {
       setCurrentTrackIndex(0); // Loop back to the first track
     }
+  };
+
+  const handleProgressBarClick = (e) => {
+    const progressBarRect = progressBarRef.current.getBoundingClientRect();
+    const offsetX = e.clientX - progressBarRect.left;
+    const percentage = offsetX / progressBarRef.current.offsetWidth;
+    const newTime = percentage * audioPlayerRef.current.duration;
+    setCurrentTime(newTime);
+    audioPlayerRef.current.currentTime = newTime;
   };
 
   return (
@@ -108,9 +137,14 @@ const AudioPlayer = () => {
         id="audioPlayer"
         controls
         onEnded={handleEnded}
-        onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
       ></audio>
+      <div
+        ref={progressBarRef}
+        id="progressBar"
+        onClick={handleProgressBarClick}
+        style={{ width: "100%", backgroundColor: "#ccc", cursor: "pointer" }}
+      ></div>
       <button onClick={handleReset}>Reset</button>
     </div>
   );
